@@ -101,7 +101,7 @@ plot(time,Iapp,'k','linewidth',2)
 ylabel('Iext')
 set(gca,'LineWidth',1.5)
 set(gca,'FontSize',16)
-xlabel('time (ms)')
+%xlabel('time (ms)')
 title('inject different Normal strenghs at three locations');
 
 subplot(3,1,2)
@@ -109,7 +109,7 @@ plot(time,n,'linewidth',2)
 hold on    
 plot(time,m,'linewidth',2)
 plot(time,h,'linewidth',2)
-leg=legend('n','m','h','location','east');
+leg=legend('n gate','m gate','h gate','location','east');
 set(leg,'FontSize',12)
 ylabel('active probability')
 box off
@@ -118,11 +118,13 @@ temp(3)=0;
 axis(temp)
 set(gca,'LineWidth',1.5)
 set(gca,'FontSize',16)
-xlabel('time (ms)')
-title('Iron Dynamics')
+%xlabel('time (ms)')
+title('Ion Dynamics')
 
 subplot(3,1,3)
 plot(time,V,'Color',[.5 .5 .5],'linewidth',2)
+hold on
+plot(time, V0+ 0*time, 'g--', 'linewidth', 1)
 set(gca,'LineWidth',1.5)
 ylabel('V (mV)')
 xlabel('time (ms)')
@@ -177,13 +179,16 @@ end
 figure
 subplot(3,1,1)
 plot(time,I,'LineWidth',2)
-ylabel('I (mV)')
+hold on
+plot(time,0+0*time,'r--','LineWidth', 1)
+ylabel('I (mV/ms)')
 set(gca,'FontSize',18)
 title('LIF Model Simulation')
 
 subplot(3,1,2)
 plot(time,V,'LineWidth',2)
 hold on
+plot(time, -72+0*time,'r--', 'linewidth',1)
 ylabel('V (mV)')
 set(gca,'FontSize',18)
 
@@ -233,12 +238,14 @@ end
 figure
 subplot(3,1,1)
 plot(time,I,'LineWidth',2)
-ylabel('I (mV)')
+ylabel('I (mV/ms)')
 set(gca,'FontSize',18)
 title('EIF Model Simulation with constant input')
 
 subplot(3,1,2)
 plot(time,V,'LineWidth',2)
+hold on
+plot(time,VT+0*time,'r--', 'linewidth', 1)
 ylabel('V (mV)')
 set(gca,'FontSize',18)
 
@@ -645,118 +652,23 @@ axis tight
 box off
 set(gca,'FontSize',15)
 
-%% EIF with Homogenous Poisson Input
+
+%% Synaptic EIF model with many neurons(with Homogenous Poisson Input)
 % Simulation of an exponential integrate-and-fire (EIF) model neuron
 % with current-based snaptic input
 
 clear
 close all
 
-% Neuron parameters
-EL=-72;
-taum=10;
-Vth=10;
-Vre=-72;
-VT=-55;
-DT=2;
-
-% Synaptic parameters
-taue=4;
-taui=6;
-Ne=80;
-Ni=20;
-re=10/1000+zeros(Ne,1);
-ri=15/1000+zeros(Ni,1);
-Je=25+zeros(1,Ne);
-Ji=-25+zeros(1,Ni);
-
-
-
-% Time vector in ms
-T=1000;
-dt=.1;
-time=0:dt:T;
-
-% Applied current
-Iapp=0+zeros(size(time));
-
-% Excitatory and inhibitory spike trains
-Se=zeros(Ne,numel(time));
-Si=zeros(Ni,numel(time));
-for k=1:Ne
-    Se(k,:)=HomogPoisson(re(k),T,dt);
-end
-for k=1:Ni
-    Si(k,:)=HomogPoisson(ri(k),T,dt);
-end
-
-
-% Solve ODE with threshold-reset condition
-V=zeros(size(time)); % initialize V
-V(1)=EL; % Initial condition
-Ie=zeros(size(time)); % initialize ge
-Ie(1)=0; % Initial condition
-Ii=zeros(size(time)); % initialize gi
-Ii(1)=0; % Initial condition
-S=zeros(size(time));
-for i=2:numel(time)
-   
-   % Euler step
-   V(i)=V(i-1)+dt*((-(V(i-1)-EL)+DT*exp((V(i-1)-VT)/DT)+Ie(i-1)+Ii(i-1)+Iapp(i))/taum);
-   Ie(i)=Ie(i-1)+dt*(-Ie(i-1)+Je*Se(:,i-1))/taue;
-   Ii(i)=Ii(i-1)+dt*(-Ii(i-1)+Ji*Si(:,i-1))/taui;
-   
-   if(V(i)>=Vth)   % If membrane potential is above threshold
-       S(i)=1/dt;
-       V(i)=Vre;   % Reset membrane potential
-       V(i-1)=Vth; % This makes the plots look nicer
-   end
-    
-    
-end
-
-Iebar=Je*re;
-Iibar=Ji*ri;
-Ibar=Iebar+Iibar;
-
-mean(S)
-
-% Plot results    
-figure
-subplot(2,1,1)
-plot(time,Ie,'r','LineWidth',1)
-hold on
-plot(time,Iebar+0*time,'r--','LineWidth',2)
-plot(time,Ii,'b','LineWidth',1)
-plot(time,Iibar+0*time,'b--','LineWidth',2)
-plot(time,Ie+Ii,'k','LineWidth',1)
-plot(time,Ibar+0*time,'k--','LineWidth',2)
-title('Synaptic Current Input')
-ylabel('I')
-%leg=legend('Ii','Ie','Ii','location','east');
-%set(leg,'FontSize',12)
-%xlabel('time (ms)')
-axis tight 
-box off
-set(gca,'FontSize',15)
-
-figure
-subplot(2,1,2)
-plot(time,V,'LineWidth',2)
-%ylabel('V (mV)')
-title('Membrane Potential dynamics for Post-syn Neuron j')
-ylabel(['$V_j(mV)$'], 'Interpreter','latex')
-xlabel('time (ms)')
-axis tight 
-box off
-set(gca,'FontSize',15)
-
-%% Synaptic EIF model with many neurons input
-% Simulation of an exponential integrate-and-fire (EIF) model neuron
-% with current-based snaptic input
-
-clear
-close all
+% %%%%% Function to generate Poisson Process %%%%
+% 
+% function rho = HomogPoisson(r, T, dt)
+% 
+%     time = 0:dt:T;
+%     rho = binornd(1, r*dt, size(time))/dt;
+%     
+% end
+HomogPoisson = @(r, T, dt) (binornd(1,r*dt, size(0:dt:T)))/dt
 
 % Neuron parameters
 EL=-72;
@@ -832,13 +744,14 @@ figure
 subplot(2,1,1)
 plot(time,Ie,'r','LineWidth',1)
 hold on
-%plot(time,Iebar+0*time,'r--','LineWidth',2)
+plot(time,Iebar+0*time,'r--','LineWidth',2)
 plot(time,Ii,'b','LineWidth',1)
-%plot(time,Iibar+0*time,'b--','LineWidth',2)
-%plot(time,Ie+Ii,'k','LineWidth',1)
-%plot(time,Ibar+0*time,'k--','LineWidth',2)
+plot(time,Iibar+0*time,'b--','LineWidth',2)
+plot(time,Ie+Ii,'k','LineWidth',1)
+plot(time,Ibar+0*time,'k--','LineWidth',2)
 ylabel('Current (mV/ms')
-title("Many neurons' input current")
+title("Many neurons' Synaptic Current Inputs")
+xlabel('time (ms)')
 axis tight 
 box off
 set(gca,'FontSize',15)
@@ -849,6 +762,7 @@ plot(time,V,'LineWidth',2)
 hold on
 plot(time,VT+0*time,'r--','LineWidth',2)
 %ylabel('V (mV)')
+title('Membrane Potential Dynamics for Post-syn. Neuron j')
 ylabel(['$V_j(mV)$'], 'Interpreter','latex')
 xlabel('time (ms)')
 axis tight 
@@ -863,6 +777,15 @@ set(leg,'FontSize',12)
 
 clear
 close all
+% %%%%% Function to generate Poisson Process %%%%
+% 
+% function rho = HomogPoisson(r, T, dt)
+% 
+%     time = 0:dt:T;
+%     rho = binornd(1, r*dt, size(time))/dt;
+%     
+% end
+HomogPoisson = @(r, T, dt) (binornd(1,r*dt, size(0:dt:T)))/dt
 
 % Neuron parameters
 EL=-72;
@@ -948,7 +871,7 @@ plot(time,mean(Ii),'b','LineWidth',1)
 plot(time,Iibar+0*time,'b--','LineWidth',1)
 plot(time,mean(Ie+Ii),'k','LineWidth',1)
 plot(time,Ibar+0*time,'k--','LineWidth',1)
-ylabel('I')
+ylabel('I(mV/ms)')
 title("Mean Synaptic Current")
 axis tight 
 box off
@@ -965,7 +888,7 @@ plot(NeuronOneTime,NeuronOneSpike,'b.','MarkerSize',15)
 NeuronTwoTime = SpikeTimes(NeuronIndices ==50)
 NeuronTwoSpike = NeuronIndices(NeuronIndices ==50)
 plot(NeuronTwoTime,NeuronTwoSpike,'r.','MarkerSize',15)
-xlabel('time (ms)')
+%xlabel('time (ms)')
 ylabel('neuron index')
 title("Post-syn neruons spikes in the network")
 axis tight 
@@ -976,6 +899,7 @@ plot(time,V(1,:),"b",'LineWidth',2)
 hold on
 plot(time,V(50,:),"r",'LineWidth',2)
 ylabel('V (mV)')
+xlabel('time (ms)')
 title("Membrane Potential for Post-syn neuron 1 & neuron 50")
 axis tight 
 box off
@@ -988,6 +912,15 @@ set(gca,'FontSize',15)
 clear
 close all
 
+% %%%%% Function to generate Poisson Process %%%%
+% 
+% function rho = HomogPoisson(r, T, dt)
+% 
+%     time = 0:dt:T;
+%     rho = binornd(1, r*dt, size(time))/dt;
+%     
+% end
+HomogPoisson = @(r, T, dt) (binornd(1,r*dt, size(0:dt:T)))/dt
 
 reVals=(3:1:15)/1000;
 numVals=numel(reVals);
@@ -1073,14 +1006,78 @@ for j=1:numVals
 
 end
 
-
-
-
-
 plot(Ibar,r,'LineWidth',2)
 hold on
-xlabel('Ibar')
-ylabel('r (Hz)')
+%title(['$' latex(f) '$ for $x$ and $y$ in $[-2\pi,2\pi]$'],'Interpreter','latex')
+xlabel('$\bar{I}(mV/ms)$', 'Interpreter', 'latex')
+ylabel('$r^{post}(Hz$)', 'Interpreter', 'latex')
+title('Approximation of r')
+set(gca,'FontSize',16)
+%% rate model
+clear
+close all
+ 
+% Discretized time
+T=10000; %10s
+dt=.1;
+time=0:dt:T;
+ 
+% Neuron parameters
+EL=-72;
+taum=15;
+Vth=10;
+Vre=-75;
+VT=-55;
+DT=4;
+
+I0i = 10:0.1:20;
+rate=zeros(size(I0i));
+
+for j=1:numel(I0i)
+    I=I0i(j)+zeros(size(time));
+    
+    V=zeros(size(time));
+    rho=zeros(size(time));
+    V(1)=-75;
+    for i= 2:numel(time)
+        V(i)=V(i-1)+(1/taum)*(-(V(i-1)-EL)+DT*exp((V(i-1)-VT)/DT)+I(i))*dt;
+        if(V(i)>=Vth)
+            V(i)=Vre;
+            V(i-1)=Vth;
+            rho(i)=1/dt;
+        end
+    end
+    rate(j) =1000 * mean(rho); % in Hz
+end
+
+% non-linear fit
+Ith = 12.99;
+c = 7.759;
+f = @(x)(c.*(x-Ith).^(0.6).*(x>Ith)); 
+
+tau = .1;
+ratemodel=zeros(size(I0i,2), numel(time));
+for j=1:numel(I0i)
+    [j numel(I0i)]
+    for i = 1:numel(time)
+        ratemodel(j,i) = ratemodel(j,i)+dt*(1/tau)*f(I0i(j));
+    end
+end
+
+
+x = I0i;
+y = rate;
+rateplot = mean(ratemodel,2);
+
+figure
+plot(x,y,'k','linewidth',2)
+hold on
+plot(x,f(x),'g--','linewidth',2)
+plot(I0i, rateplot,'r','linewidth',1)
+title('f-I curve comparison from Spiking & Rate Models')
+xlabel('I(mV/ms)')
+ylabel('r(Hz)')
+legend('Spiking model', 'fit','Rate model')
 set(gca,'FontSize',16)
 
 %% Recurrent Network
@@ -1252,7 +1249,7 @@ plot(time(time>=TBurn),mean(Iee(:,time>=TBurn))+mean(Iei(:,time>=TBurn))+Iappe(t
 legend('Iee+Iappe','Iei','Itotal')
 title('Recurrent Network Simulations')
 xlabel('time (ms)')
-ylabel('currents')
+ylabel('currents(mV/ms)')
 set(gca,'FontSize',16)
 
 % subplot(3,1,2)
@@ -1273,79 +1270,14 @@ hold on
 plot(time(time>=TBurn),riSmooth(time>=TBurn),'b','LineWidth',2)
 plot(time(time>=TBurn),Erate + 0*time(time>=TBurn),'r--', 'linewidth',2)
 plot(time(time>=TBurn),Irate + 0*time(time>=TBurn),'b--', 'linewidth',2)
-xlabel('time (ms)')
-ylabel('rate (Hz)')
+xlabel('time(ms)')
+ylabel('rate(Hz)')
 %set(gca,'YLim',[0 Inf])
 legend('e','i')
 set(gca,'FontSize',16)
 
 
-%% f-I curve
-clear
-close all
- 
-% Discretized time
-T=10000; %10s
-dt=.1;
-time=0:dt:T;
- 
-% Neuron parameters
-EL=-72;
-taum=15;
-Vth=10;
-Vre=-75;
-VT=-55;
-DT=4;
 
-I0i = 10:0.1:20;
-rate=zeros(size(I0i));
-
-for j=1:numel(I0i)
-    I=I0i(j)+zeros(size(time));
-    
-    V=zeros(size(time));
-    rho=zeros(size(time));
-    V(1)=-75;
-    for i= 2:numel(time)
-        V(i)=V(i-1)+(1/taum)*(-(V(i-1)-EL)+DT*exp((V(i-1)-VT)/DT)+I(i))*dt;
-        if(V(i)>=Vth)
-            V(i)=Vre;
-            V(i-1)=Vth;
-            rho(i)=1/dt;
-        end
-    end
-    rate(j) =1000 * mean(rho); % in Hz
-end
-
-% non-linear fit
-Ith = 12.99;
-c = 7.759;
-f = @(x)(c.*(x-Ith).^(0.6).*(x>Ith)); 
-
-tau = .1;
-ratemodel=zeros(size(I0i,2), numel(time));
-for j=1:numel(I0i)
-    [j numel(I0i)]
-    for i = 1:numel(time)
-        ratemodel(j,i) = ratemodel(j,i)+dt*(1/tau)*f(I0i(j));
-    end
-end
-
-
-x = I0i;
-y = rate;
-rateplot = mean(ratemodel,2);
-
-figure
-plot(x,y,'k','linewidth',2)
-hold on
-plot(x,f(x),'b','linewidth',2)
-plot(I0i, rateplot,'r--','linewidth',1)
-title('f-I curve fitted from Spiking & Rate Models')
-xlabel('I (mV)')
-ylabel('r (Hz)')
-legend('Spiking model', 'fit','Rate model')
-set(gca,'FontSize',16)
 %%
 clear
 close all
@@ -1624,8 +1556,8 @@ plot(RateTime,ret,'r','linewidth',2)
 hold on
 plot(RateTime,rit,'b','linewidth',2)
 title('Time-dependent rates of ISP on EIF model')
-xlabel('time (ms)')
-ylabel('rate (Hz)')
+xlabel('time(ms)')
+ylabel('rate(Hz)')
 legend('exc. rate', 'inh. rate')
 set(gca,'FontSize',16)
 
